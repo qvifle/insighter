@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Insighter",
+  "version": "0.1.0",
+  "description": "",
+  "author": "clarkkent",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "./popup/index.html",
+    "default_icon": {
+      "16": "public/icon.png"
+    }
+  },
+  "icons": {
+    "16": "public/icon.png"
+  },
+  "host_permissions": [
+    "https://lms.utmn.ru/*",
+    "https://sandbox405.moodledemo.net/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://lms.utmn.ru/*",
+        "https://sandbox405.moodledemo.net/*"
+      ],
+      "js": [
+        "scripts/import-index.js"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "chunks/*-*.js",
+        "scripts/index.js"
+      ],
+      "matches": [
+        "https://lms.utmn.ru/*",
+        "https://sandbox405.moodledemo.net/*"
+      ]
+    }
+  ]
+}
