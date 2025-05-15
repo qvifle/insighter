@@ -94,7 +94,7 @@ class Question extends MoodleEntity {
     return this.element.querySelector(this.#questionBodyElementId)
   }
 
-  get questionTextElement() { 
+  get questionTextElement() {
     return this.element.querySelector(this.#questionTextElementId)
   }
 
@@ -102,7 +102,7 @@ class Question extends MoodleEntity {
     return this.questionTextElement.querySelectorAll("img")
   }
 
-  get questionText() { 
+  get questionText() {
     return this.bodyElement.innerText // Возможно поменять на questionTextElement
       .split("\n")
       .slice()
@@ -110,8 +110,9 @@ class Question extends MoodleEntity {
       .join(" ")
   }
 
-  // get screenShoot() {
+  // async screenShoot() {
   //   const image = await html2canvas(el).then((canvas) => canvas.toDataURL('image/png'));
+  //   document.
 
   // }
 
@@ -3896,8 +3897,8 @@ const url = `${API_URL}/answer`;
 
 class AnswerService {
 
-  getAnswer({ inputs, question }) {
-    return axios.post(url, { inputs, question })
+  getAnswer({ inputs, question, model }) {
+    return axios.post(url, { inputs, question, model })
   }
 }
 
@@ -3956,7 +3957,7 @@ class Page {
 }
 
 class Insighter {
-  #isShow = true
+  #isShow = window.localStorage.getItem('isShow') === "true"
   answers = []
 
   constructor(answers) {
@@ -3968,6 +3969,7 @@ class Insighter {
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' || event.key === 'Esc') {
         this.toggleShow();
+        console.log('toggle');
       }
     });
   }
@@ -3978,26 +3980,21 @@ class Insighter {
 
   set isShow(value) {
     this.#isShow = value;
-    this.onShowChange();
+    window.localStorage.setItem('isShow', value);
+    this.answersLogic();
   }
 
   toggleShow() {
     this.isShow = !this.isShow;
   }
 
-  onShowChange() {
-    this.answersLogic();
-  }
-
   answersLogic() {
-    if (this.#isShow) {
+    if (this.isShow) {
       this.showAnswers();
     } else {
       this.hideAnswers();
     }
   }
-
-
 
   hideAnswers() {
     Object.entries(this.answers).forEach(([subQuestion, { answers, type }]) => {
@@ -4024,7 +4021,6 @@ class Insighter {
             break
           default:
             console.log(`UNKNOWN ELEMENT ${type}`);
-
         }
       });
     });
@@ -4033,30 +4029,37 @@ class Insighter {
   showAnswers() {
     Object.entries(this.answers).forEach(([subQuestion, { answers, type }]) => {
       answers.forEach((answer) => {
-        const answerElement = document.getElementById(answer.id);
-        switch (type) {
-          case "checkbox":
-          case "radio":
-            if (answerElement.ariaLabelledByElements?.[0]) {
-              answerElement.ariaLabelledByElements[0].style.fontStyle = 'italic';
+        try {
+          const answerElement = document.getElementById(answer.id);
+          switch (type) {
+            case "checkbox":
+            case "radio":
+              if (answerElement.ariaLabelledByElements?.[0]) {
+                answerElement.ariaLabelledByElements[0].style.fontStyle = 'italic';
+                break
+              }
+
+              const labelElement = document.querySelector(`label[for="${answer.id}"]`);
+              labelElement.style.fontStyle = 'italic';
+
               break
-            }
+            case "text":
+              answerElement.placeholder = answer?.text;
+              break
+            case "select-one":
+              const option = answerElement.querySelector(`option[value="${answer.value}"]`);
+              option.style.fontStyle = 'italic';
+              break
+            default:
+              console.log(`UNKNOWN ELEMENT ${type}`);
 
-            const labelElement = document.querySelector(`label[for="${answer.id}"]`);
-            labelElement.style.fontStyle = 'italic';
-
-            break
-          case "text":
-            answerElement.placeholder = answer.text;
-            break
-          case "select-one":
-            const option = answerElement.querySelector(`option[value="${answer.value}"]`);
-            option.style.fontStyle = 'italic';
-            break
-          default:
-            console.log(`UNKNOWN ELEMENT ${type}`);
-
+          }
+        } catch (err) {
+          console.err(err);
+          console.log(answers);
+          console.log(answer);
         }
+
       });
     });
   }
@@ -4084,7 +4087,12 @@ class QuestionsPage extends Page {
         }
 
         const question = new Question(el);
-        const res = await answerService.getAnswer({ inputs: question.inputs, question: question.questionText });
+        const res = await answerService.getAnswer({
+          question: {
+            inputs: question.inputs, questionText: question.questionText
+          },
+          model: "gpt-4.1-nano"
+        });
 
         const insighter = new Insighter(res.data);
         insighter.init();
